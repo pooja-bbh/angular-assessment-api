@@ -7,7 +7,6 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 
-// en-SG locale data must be registered for CurrencyPipe/DatePipe to format under LOCALE_ID 'en-SG'.
 registerLocaleData(localeEnSg);
 
 export const appConfig: ApplicationConfig = {

@@ -23,7 +23,6 @@
   align-self: center;
 }
 
-// Stack the controls vertically below the dashboard's 1024px breakpoint (styling.md).
 @media (max-width: 1023px) {
   .filter-bar {
     flex-direction: column;

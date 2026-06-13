@@ -174,10 +174,29 @@ Established the fixed technology baseline:
 - `StatusBadgeComponent` + `SkeletonLoaderComponent` converted from inline `styles` to `styleUrl` `.scss` files. **Badge redesigned**: semantic-colour fill + contrasting text (dropped the earlier neutral-pill + coloured-dot look); kept the `__label` span the spec asserts. Skeleton rows now ≈ a 52px Material data row (`min-height: 3.25rem`), pulse on `var(--color-surface-variant)`.
 - Full suite still green: **45 tests / 10 files**.
 
+### Service & store specs — `core/services/*.spec.ts`
+- Reviewed all 10 existing specs; the two priority component specs were already complete (`error-state`: inputs/retry/`role="alert"`/axe; `policy-table`: all four load states + retry + optimistic-flag→revert). Created the three missing ones.
+- `storage.service.spec.ts`: mocks `localStorage` via `vi.stubGlobal` (never real storage). Covers set/get round-trip, missing key, malformed JSON → null + warn, **quota-exceeded `DOMException` on write → false + warn**, remove, and remove-throws swallowed + warn.
+- `policy.service.spec.ts`: `provideHttpClient()` + `provideHttpClientTesting()` + `HttpTestingController`, `httpMock.verify()` in `afterEach`. Covers `getPolicies` success (envelope → `PolicyPage`), **4xx → `BAD_REQUEST`**, **network error (status 0) → `NETWORK`**, and `flagForReview` (PATCH per id, body `{ flaggedForReview: true }`, ordered results).
+- `policy-filter.store.spec.ts`: signals read directly. Covers defaults, `patchFilters`/`setSearch`/`clearFilters`/`setPage` (clamp)/`setPageSize`/`setSort`/`reset`, the `queryParams` + `hasActiveFilters` computeds, and `initFromUrl` (valid hydration incl. dropping a bogus status; invalid-scalar fallback).
+- Full suite green: **66 tests / 13 files**.
+
+### Runtime fixes — mock API + filter feedback loop
+- **"Can't reach the server" on load** was the mock API not running (`ng serve` alone): json-server was down (`curl` exit 7). Started it; verified `db.json` serves correctly with CORS `*` and that the auth-interceptor's `Authorization` header passes preflight. Documented `npm run start:all` as the correct workflow.
+- **Stuck-on-loading after any filter/search** was an infinite feedback loop: `DashboardComponent` feeds `queryParams()` back into the filter bar's `[currentFilters]`, whose `effect()` mirrors it via `setValue({ emitEvent: false })` — but **Material's date-range inputs re-emit `valueChanges` anyway**, so the bar emitted `filterChange` back → store re-patched → `queryParams` new object → re-fetch forever (table + stats both perpetually loading).
+- Fix in `PolicyFilterBarComponent`: `emitDateRange()` now **ignores echoes** that equal the current input (only genuine user changes emit), plus `fromIsoDate()` parses ISO dates as **local** midnight so they round-trip through `toIsoDate()` (a bare `new Date('yyyy-MM-dd')` is UTC and would shift the day, defeating the guard). Added `policy-filter-bar.loop.spec.ts` regression test (setting `currentFilters` must emit nothing).
+- Root cause the earlier unit tests missed: they only covered the *initial* load with a mocked service, never the input→output→input round-trip the live dashboard exercises.
+
+### Codebase review & cleanup — build/lint/test + comment removal
+- `ng build`: no TS/template errors. `ng lint`: **wasn't configured** — added `angular-eslint` (`ng add`), then fixed 2 errors in `src/vitest-axe.d.ts` (empty interface + unused generic) by declaring `toHaveNoViolations(): T`; added a `**/*.d.ts` override disabling `no-explicit-any` (the generic default must stay `T = any` to merge with `@vitest/expect`'s `Matchers<T = any>`); kept it a module via `export {}` (dropping the import had made it an ambient redeclaration that broke `expect.extend`). `ng test`: 0 failing.
+- **Removed all comments** from ~28 source files (`core/`, `shared/`, `features/`, `layout/`, root configs, `styles.scss`) via 3 parallel agents, then re-verified lint+build+test. Preserved the `/// <reference types="@angular/localize" />` compiler directive in `main.ts`, all string literals/URLs, and `i18n`/`aria-*`/`mat-*` template attributes.
+- Raised the `initial` bundle budget to 1 MB/2 MB (eager animations + Material in the shell) → **fully clean build** (no warnings).
+- Final state: clean build, clean lint, **67 tests / 14 files** green, app running with data.
+
 ### Outstanding / next
 - HTTP **logging/timing interceptor** (request duration at `info` per logging.md) and global **`ErrorHandler`** not yet created.
-- Specs still owed per testing.md: models/services/store (esp. `StorageService` quota-path, `PolicyService` HTTP-mapping via `provideHttpClientTesting`, `PolicyFilterStore.initFromUrl` deep-link, `ThemeService`); `HeaderComponent`/`DashboardComponent` have no specs yet.
-- Stats not filter-scoped (`getStats()` ignores params); decide whether to thread the filter in. Initial-bundle budget warning.
+- Specs still owed per testing.md: `ThemeService`, `HeaderComponent`, `DashboardComponent` (a `DashboardComponent` integration spec would have caught the filter loop).
+- Stats not filter-scoped (`getStats()` ignores params); decide whether to thread the filter in.
 
 ---
 
@@ -194,6 +213,8 @@ How the user responded to each AI deliverable this session. (**Accepted** = used
 - `policy-table` (smart) + `bulk-action-toolbar` + specs.
 - Layout & wiring (header, dashboard, `app.*`, routes, config).
 - Styling setup (`styles.scss` + status-badge/skeleton `.scss` files).
+- Service & store specs (`storage.service`, `policy.service`, `policy-filter.store`).
+- Runtime fixes (mock-API diagnosis, filter feedback-loop fix) and codebase review/cleanup (ESLint setup, comment removal, budget bump).
 - All ai-journal update requests.
 
 ### Challenged (revised after user pushback, not a hard rejection)

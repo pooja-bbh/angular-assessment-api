@@ -2,14 +2,6 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-/**
- * Dumb error-state panel shown when a request fails.
- *
- * Centres an error icon, the (already user-friendly) message, and an optional
- * retry button. Carries `role="alert"` so screen readers announce it immediately
- * (accessibility.md). Emits `retry` up via an `output()`; the parent smart
- * component re-triggers the API call (error-handling.md).
- */
 @Component({
   selector: 'app-error-state',
   imports: [MatButtonModule, MatIconModule],

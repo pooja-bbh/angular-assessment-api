@@ -5,11 +5,6 @@ import { PolicyStatsComponent } from '../../policy-stats/policy-stats.component'
 import { PolicyFilterBarComponent } from '../policy-filter-bar/policy-filter-bar.component';
 import { PolicyTableComponent } from '../policy-table/policy-table.component';
 
-/**
- * Smart container composing the dashboard: filter bar, stats panel, and policy
- * table. It owns the wiring from the (dumb) filter bar's outputs to the
- * `PolicyFilterStore`; the stats panel and table read the store themselves.
- */
 @Component({
   selector: 'app-dashboard',
   imports: [PolicyFilterBarComponent, PolicyStatsComponent, PolicyTableComponent],

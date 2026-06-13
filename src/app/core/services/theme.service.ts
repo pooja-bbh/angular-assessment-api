@@ -2,17 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { computed, effect, inject, Injectable, RendererFactory2, signal } from '@angular/core';
 import { StorageKey, StorageService } from './storage.service';
 
-/** The two colour themes the dashboard supports. */
 export type Theme = 'light' | 'dark';
 
-/**
- * Owns the active colour theme as a signal and keeps the `<body>` theme class
- * and persisted preference in sync.
- *
- * DOM is mutated only through Angular's `Renderer2` (never `document.body.classList`
- * directly) per the services rules. The preference is a non-sensitive UI value, so
- * persisting it via `StorageService` is permitted.
- */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly storage = inject(StorageService);
@@ -21,13 +12,10 @@ export class ThemeService {
 
   private readonly currentTheme = signal<Theme>(this.resolveInitialTheme());
 
-  /** The active theme as a read-only signal. */
   readonly theme = this.currentTheme.asReadonly();
-  /** Convenience derived signal for binding dark-mode UI. */
   readonly isDark = computed(() => this.currentTheme() === 'dark');
 
   constructor() {
-    // Reflect every theme change to the DOM and storage; runs once on init too.
     effect(() => this.applyTheme(this.currentTheme()));
   }
 
@@ -52,7 +40,6 @@ export class ThemeService {
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
-    // `matchMedia` is absent in non-browser environments (e.g. jsdom under test).
     const view = this.document.defaultView;
     if (view && typeof view.matchMedia === 'function') {
       return view.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

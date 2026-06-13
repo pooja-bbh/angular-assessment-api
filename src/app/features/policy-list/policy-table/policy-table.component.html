@@ -68,6 +68,11 @@
             <td mat-cell *matCellDef="let row">{{ row.region }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="lineOfBusiness">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colLineOfBusiness">Line of business</th>
+            <td mat-cell *matCellDef="let row">{{ row.lineOfBusiness }}</td>
+          </ng-container>
+
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colStatus">Status</th>
             <td mat-cell *matCellDef="let row"><app-status-badge [status]="row.status" /></td>

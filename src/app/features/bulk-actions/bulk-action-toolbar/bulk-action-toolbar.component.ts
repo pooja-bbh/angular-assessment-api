@@ -2,12 +2,6 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-/**
- * Dumb toolbar shown when one or more policies are selected.
- *
- * Reports the selection count and emits bulk actions up via `output()` — it owns
- * no state. `role="region"` + `aria-live` announce the selection to screen readers.
- */
 @Component({
   selector: 'app-bulk-action-toolbar',
   imports: [MatButtonModule, MatIconModule],

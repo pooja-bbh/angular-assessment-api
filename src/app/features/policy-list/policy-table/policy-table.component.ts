@@ -34,11 +34,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 const SNACKBAR_DURATION_MS = 7000;
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
-/**
- * Smart container for the policy list: drives the filter store, fetches policies
- * reactively, and renders loading / error / empty / table states. Bulk and per-row
- * "flag for review" use optimistic updates with revert + snackbar on failure.
- */
 @Component({
   selector: 'app-policy-table',
   imports: [
@@ -72,6 +67,7 @@ export class PolicyTableComponent {
     'policyNumber',
     'policyholderName',
     'region',
+    'lineOfBusiness',
     'status',
     'premiumAmount',
     'expiryDate',
@@ -79,7 +75,6 @@ export class PolicyTableComponent {
   ];
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
 
-  /** Four-state query result. A linkedSignal so flag actions can apply optimistic overrides. */
   readonly loadState: WritableSignal<LoadState<PolicyPage>>;
 
   private readonly reload$ = new Subject<void>();
@@ -111,7 +106,6 @@ export class PolicyTableComponent {
   protected readonly isPartiallySelected = computed(() => this.selectedCount() > 0 && !this.isAllSelected());
 
   constructor() {
-    // Seed filter state from the URL before the load pipeline subscribes (single initial fetch).
     this.filterStore.initFromUrl(this.route.snapshot.queryParams);
 
     const trigger$ = merge(
@@ -134,13 +128,11 @@ export class PolicyTableComponent {
 
     this.loadState = linkedSignal<LoadState<PolicyPage>>(() => serverState());
 
-    // Reset selection whenever fresh server data arrives.
     effect(() => {
       serverState();
       this.selectedIds.set(new Set());
     });
 
-    // Keep active page & sort in the URL on every change.
     effect(() => {
       void this.router.navigate([], {
         relativeTo: this.route,
@@ -214,7 +206,6 @@ export class PolicyTableComponent {
     this.flagPolicies([policy.id]);
   }
 
-  /** Optimistically mark policies as flagged; revert and notify on API error. */
   private flagPolicies(policyIds: readonly string[]): void {
     const state = this.loadState();
     if (state.status !== 'success' || policyIds.length === 0) {

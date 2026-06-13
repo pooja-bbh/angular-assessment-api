@@ -7,7 +7,6 @@ import { LINES_OF_BUSINESS, POLICY_STATUSES } from '../models/policy.constants';
 import { LineOfBusiness, Policy, PolicyFilter, PolicyPage, PolicyStats, PolicyStatus } from '../models/policy.model';
 import { LoggingService } from './logging.service';
 
-/** Subset of the json-server v1 pagination envelope the service consumes. */
 interface JsonServerPage<T> {
   readonly data: readonly T[];
   readonly items: number;
@@ -17,15 +16,20 @@ interface JsonServerPage<T> {
 const EXPIRY_WINDOW_DAYS = 30;
 const MILLISECONDS_PER_DAY = 86_400_000;
 
-/**
- * Single source of policy data. All HTTP goes through `HttpClient` here; the rest
- * of the app consumes the clean `PolicyPage` / `PolicyStats` contract and never
- * sees the mock server's wire format.
- *
- * Methods return Observables (rather than `httpResource()`) so they are directly
- * testable with `HttpClientTestingModule` / `HttpTestingController` (testing.md);
- * smart components fold the result into signals.
- */
+// json-server 1.x has no full-text `q` param — free-text search is expressed as a
+// case-insensitive `contains` match across these fields, combined with `or`.
+const SEARCH_FIELDS = ['policyNumber', 'policyholderName', 'underwriter'] as const;
+
+interface WhereCondition {
+  readonly eq?: string;
+  readonly in?: readonly string[];
+  readonly gte?: string;
+  readonly lte?: string;
+  readonly contains?: string;
+}
+
+type WhereClause = Record<string, WhereCondition | readonly WhereClause[]>;
+
 @Injectable({ providedIn: 'root' })
 export class PolicyService {
   private readonly http = inject(HttpClient);
@@ -36,7 +40,6 @@ export class PolicyService {
   private readonly minPageSize = 1;
   private readonly maxPageSize = 100;
 
-  // User-friendly messages mapped from HTTP status codes (error-handling.md).
   private readonly messagesByStatus: Readonly<Record<number, AppError>> = {
     0: { code: 'NETWORK', message: "Can't reach the server. Check your connection and try again.", statusCode: 0 },
     400: { code: 'BAD_REQUEST', message: 'The request was invalid. Please adjust your filters and try again.', statusCode: 400 },
@@ -49,7 +52,6 @@ export class PolicyService {
     429: { code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please wait a moment and try again.', statusCode: 429 },
   };
 
-  /** Fetch one server-side page of policies for the given filter. */
   getPolicies(filter: PolicyFilter): Observable<PolicyPage> {
     const params = this.buildParams(filter);
     this.logger.debug(this.context, 'Fetching policies', { url: this.policiesUrl });
@@ -60,7 +62,6 @@ export class PolicyService {
     );
   }
 
-  /** Fetch the full set once and aggregate the summary statistics. */
   getStats(): Observable<PolicyStats> {
     return this.http.get<readonly Policy[]>(this.policiesUrl).pipe(
       map((policies) => this.computeStats(policies)),
@@ -68,14 +69,12 @@ export class PolicyService {
     );
   }
 
-  /** Flag or unflag a single policy for review. */
   setFlaggedForReview(policyId: string, flaggedForReview: boolean): Observable<Policy> {
     return this.http.patch<Policy>(`${this.policiesUrl}/${encodeURIComponent(policyId)}`, { flaggedForReview }).pipe(
       catchError((error: HttpErrorResponse) => this.handleError(error, 'update the review flag')),
     );
   }
 
-  /** Flag or unflag one or more policies in a single bulk action. */
   flagForReview(policyIds: readonly string[], flaggedForReview: boolean): Observable<readonly Policy[]> {
     if (policyIds.length === 0) {
       return forkJoin([] as Observable<Policy>[]);
@@ -87,36 +86,48 @@ export class PolicyService {
     const page = Math.max(0, Math.trunc(filter.page));
     const pageSize = Math.min(this.maxPageSize, Math.max(this.minPageSize, Math.trunc(filter.pageSize)));
 
-    // json-server pages are 1-based; the app contract is 0-based.
     let params = new HttpParams().set('_page', String(page + 1)).set('_per_page', String(pageSize));
 
     if (filter.sortColumn && filter.sortDirection !== '') {
       const prefix = filter.sortDirection === 'desc' ? '-' : '';
       params = params.set('_sort', `${prefix}${filter.sortColumn}`);
     }
-    // Multi-select status → one repeated query param per value (json-server treats these as OR).
-    for (const status of filter.status ?? []) {
-      params = params.append('status', status);
+
+    const where = this.buildWhere(filter);
+    if (where) {
+      params = params.set('_where', JSON.stringify(where));
+    }
+
+    return params;
+  }
+
+  // json-server only ANDs flat query params, so every filter is expressed in a single
+  // `_where` object: field criteria are ANDed, and free-text search is an OR of `contains`.
+  private buildWhere(filter: PolicyFilter): WhereClause | null {
+    const where: WhereClause = {};
+
+    if (filter.status?.length) {
+      where['status'] = { in: [...filter.status] };
     }
     if (filter.lineOfBusiness) {
-      params = params.set('lineOfBusiness', filter.lineOfBusiness);
+      where['lineOfBusiness'] = { eq: filter.lineOfBusiness };
     }
     if (filter.region) {
-      params = params.set('region', filter.region);
+      where['region'] = { eq: filter.region };
+    }
+
+    const start = filter.dateRange?.start;
+    const end = filter.dateRange?.end;
+    if (start || end) {
+      where['effectiveDate'] = { ...(start ? { gte: start } : {}), ...(end ? { lte: end } : {}) };
     }
 
     const search = filter.search?.trim();
     if (search) {
-      params = params.set('q', search);
-    }
-    if (filter.dateRange?.start) {
-      params = params.set('effectiveDate_gte', filter.dateRange.start);
-    }
-    if (filter.dateRange?.end) {
-      params = params.set('effectiveDate_lte', filter.dateRange.end);
+      where['or'] = SEARCH_FIELDS.map((field) => ({ [field]: { contains: search } }));
     }
 
-    return params;
+    return Object.keys(where).length > 0 ? where : null;
   }
 
   private toPolicyPage(response: JsonServerPage<Policy>, filter: PolicyFilter): PolicyPage {
@@ -134,8 +145,6 @@ export class PolicyService {
       (acc, status) => ({ ...acc, [status]: 0 }),
       {} as Record<PolicyStatus, number>,
     );
-    // Premiums are summed within each line of business; a real BFF would normalise
-    // currency first — totals here mirror the mock data's raw amounts.
     const totalPremiumByLob = LINES_OF_BUSINESS.reduce(
       (acc, lob) => ({ ...acc, [lob]: 0 }),
       {} as Record<LineOfBusiness, number>,
@@ -160,7 +169,6 @@ export class PolicyService {
 
   private handleError(error: HttpErrorResponse, action: string): Observable<never> {
     const appError = this.toAppError(error.status);
-    // Log a summary only — never the response body, PII, or premium amounts.
     this.logger.error(this.context, `Failed to ${action}`, { status: error.status, url: error.url });
     return throwError(() => appError);
   }

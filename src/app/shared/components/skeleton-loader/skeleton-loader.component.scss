@@ -14,7 +14,6 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: 0 var(--spacing-md);
-  // Approximate the height of a Material data row (~52px).
   min-height: 3.25rem;
 }
 
@@ -35,7 +34,6 @@
   }
 }
 
-// Respect users who prefer reduced motion.
 @media (prefers-reduced-motion: reduce) {
   .skeleton__cell {
     animation: none;

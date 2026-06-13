@@ -2,13 +2,6 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-/**
- * Dumb empty-state panel for when a query returns no policies.
- *
- * Centres an icon, a message, and an optional call-to-action. Carries
- * `role="status"` so screen readers announce it. Communicates the CTA press up
- * via an `output()` (never `@Output()`), per components-services-state.md.
- */
 @Component({
   selector: 'app-empty-state',
   imports: [MatButtonModule, MatIconModule],

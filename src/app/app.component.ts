@@ -16,9 +16,6 @@ export class AppComponent {
   private readonly renderer = inject(Renderer2);
 
   constructor() {
-    // Reflect the active theme onto the host element. (ThemeService also applies the
-    // class to <body>, which is what the M3 theme and design tokens in styles.scss
-    // hang off — this host class is an additional hook for host-scoped styling.)
     effect(() => {
       const theme = this.theme.theme();
       const element = this.host.nativeElement;

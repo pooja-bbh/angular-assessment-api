@@ -3,13 +3,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID 
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-/**
- * Dumb indicator shown on policies nearing expiry.
- *
- * When `isExpiringSoon` is true it renders a warning icon (an icon, not colour
- * alone) carrying an `aria-label` and a tooltip with the formatted expiry date.
- * When false it renders nothing at all (no hidden node).
- */
 @Component({
   selector: 'app-expiry-indicator',
   imports: [MatIconModule, MatTooltipModule],
@@ -41,6 +34,5 @@ export class ExpiryIndicatorComponent {
 
   private readonly locale = inject(LOCALE_ID);
 
-  // Formatting lives in the class (DatePipe-equivalent) so the template stays logic-free.
   readonly tooltipMessage = computed(() => `Expires on ${formatDate(this.expiryDate(), 'mediumDate', this.locale)}`);
 }

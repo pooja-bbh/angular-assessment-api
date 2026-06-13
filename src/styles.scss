@@ -1,14 +1,5 @@
 @use '@angular/material' as mat;
 
-// ── Angular Material 22 — Material 3 (M3) theming via mat.define-theme() ──
-// Per styling.md + tech-stack.md: M3 API only, NOT the legacy M2
-// mat.define-light-theme() / mat.define-dark-theme() APIs.
-//
-// Chubb primary is a professional blue (~#1565C0). M3 `define-theme` requires a
-// generated tonal palette, so the Material theme uses the built-in azure palette
-// (visually equivalent); the exact #1565C0 lives in the `--color-primary` token
-// below. A pixel-exact M3 primary would be generated via
-// `ng generate @angular/material:m3-theme`.
 @include mat.core();
 
 $light-theme: mat.define-theme(
@@ -38,7 +29,6 @@ $dark-theme: mat.define-theme(
   )
 );
 
-// Light theme = full component themes; dark = colour-only override via a body class.
 body.theme-light {
   @include mat.all-component-themes($light-theme);
 }
@@ -47,7 +37,6 @@ body.theme-dark {
   @include mat.all-component-colors($dark-theme);
 }
 
-// ── Design tokens (styling.md) — the single source of truth for colour/spacing/radius/type ──
 :root {
   --color-surface: #ffffff;
   --color-surface-variant: #f5f5f5;
@@ -58,9 +47,6 @@ body.theme-dark {
   --color-warning: #e65100;
   --color-success: #2e7d32;
 
-  // Contrasting text for the semantic fills (styling.md's base set has no on-* tokens).
-  // Semantic colours are theme-independent, so these are too. Warning needs dark text:
-  // white on #e65100 is only ~3.4:1 (fails AA); black is ~6.2:1.
   --color-on-error: #ffffff;
   --color-on-warning: #000000;
   --color-on-success: #ffffff;
@@ -91,7 +77,6 @@ body.theme-dark {
   --color-on-primary: #000000;
 }
 
-// ── Global resets only — no component-specific styles here (styling.md) ──
 *,
 *::before,
 *::after {

@@ -12,7 +12,7 @@
       "expiryDate": "2024-02-05",
       "region": "Malaysia",
       "underwriter": "Rajesh Menon",
-      "flaggedForReview": false
+      "flaggedForReview": true
     },
     {
       "id": "62fb6f9e-5baa-42d5-bf2f-aa834314baab",
@@ -348,7 +348,7 @@
       "expiryDate": "2023-02-12",
       "region": "Singapore",
       "underwriter": "Hannah Schmidt",
-      "flaggedForReview": false
+      "flaggedForReview": true
     },
     {
       "id": "3809a390-647a-48d8-9ce6-8fafcdc50f39",
@@ -698,7 +698,7 @@
       "expiryDate": "2023-10-02",
       "region": "Indonesia",
       "underwriter": "Marcus Chen",
-      "flaggedForReview": false
+      "flaggedForReview": true
     },
     {
       "id": "ab73d205-b854-4204-b12e-aa7d9082a855",
@@ -2014,7 +2014,7 @@
       "expiryDate": "2023-01-20",
       "region": "Hong Kong",
       "underwriter": "Daniel Foster",
-      "flaggedForReview": false
+      "flaggedForReview": true
     },
     {
       "id": "d6e9443b-a748-4904-8351-99068973bc59",
@@ -3500,5 +3500,6 @@
       "underwriter": "Suresh Pillai",
       "flaggedForReview": false
     }
-  ]
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
 }

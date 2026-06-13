@@ -9,8 +9,6 @@ import { LineOfBusiness, PolicyStats, PolicyStatus } from '../../core/models/pol
 import { PolicyFilterStore } from '../../core/services/policy-filter.store';
 import { PolicyService } from '../../core/services/policy.service';
 
-// Premiums are aggregated across mixed currencies by the BFF (PolicyStats.totalPremiumByLob
-// is a plain number). We render with a single display currency; a real BFF would normalise.
 const DISPLAY_CURRENCY = 'USD';
 const SKELETON_CARD_COUNT = POLICY_STATUSES.length + LINES_OF_BUSINESS.length + 1;
 
@@ -31,11 +29,6 @@ interface ExpiringCard {
   readonly ariaLabel: string;
 }
 
-/**
- * Smart panel of portfolio statistics. An `effect()` re-fetches stats whenever the
- * filter store's query params change. Its error state is small and inline so a stats
- * failure never blocks the main policy table.
- */
 @Component({
   selector: 'app-policy-stats',
   imports: [CurrencyPipe, MatCardModule],
@@ -187,7 +180,6 @@ export class PolicyStatsComponent {
   protected readonly skeletonCards = Array.from({ length: SKELETON_CARD_COUNT });
 
   private readonly loadStateSignal = signal<LoadState<PolicyStats>>(LoadState.idle());
-  /** Read-only four-state result of the stats query. */
   readonly loadState = this.loadStateSignal.asReadonly();
 
   private statsSubscription: Subscription | null = null;
@@ -195,7 +187,6 @@ export class PolicyStatsComponent {
   constructor() {
     this.destroyRef.onDestroy(() => this.statsSubscription?.unsubscribe());
 
-    // Re-fetch whenever the filter store's query params change.
     effect(() => {
       this.filterStore.queryParams();
       this.fetchStats();
@@ -249,7 +240,6 @@ export class PolicyStatsComponent {
   protected readonly isExpiringHighlighted = computed(() => this.expiringCard().count > 0);
 
   private fetchStats(): void {
-    // Cancel any in-flight request so rapid filter changes don't race.
     this.statsSubscription?.unsubscribe();
     this.loadStateSignal.set(LoadState.loading());
     this.statsSubscription = this.policyService.getStats().subscribe({

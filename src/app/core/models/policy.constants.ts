@@ -1,12 +1,5 @@
 import { LineOfBusiness, PolicyRegion, PolicySortColumn, PolicyStatus, SortDirection } from './policy.model';
 
-/**
- * Runtime allowlists mirroring the string-union types in `policy.model.ts`.
- *
- * These exist so unions can be validated and iterated at runtime (e.g. building
- * filter dropdowns, sanitising restored state) without duplicating literals across
- * the codebase. Keep each array in sync with its corresponding type.
- */
 export const POLICY_STATUSES: readonly PolicyStatus[] = ['Active', 'Expired', 'Pending', 'Cancelled'];
 
 export const LINES_OF_BUSINESS: readonly LineOfBusiness[] = ['Property', 'Casualty', 'A&H', 'Marine'];
