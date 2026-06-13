@@ -1,10 +1,15 @@
 # Testing Rules
 
+## Runner
+- The test runner is **Vitest**, via the Angular `@angular/build:unit-test` builder (`runner: "vitest"`) — not Karma/Jasmine. Tests run in a `jsdom` environment.
+- Use Vitest globals (`describe`/`it`/`expect`/`beforeEach`) and the Vitest API (`vi.fn()`, `vi.spyOn()`) — never Jasmine APIs (`jasmine.createSpy`, `spyOn` from Jasmine).
+- Global test setup lives in `src/test-setup.ts` (registered via the builder's `setupFiles`).
+
 ## Coverage
 - Every service, smart component, and critical dumb component must have a spec file — tests are not optional, and no failing tests may be submitted.
 
 ## HTTP
-- Use `HttpClientTestingModule` and `HttpTestingController` for all HTTP tests — never make real HTTP calls in unit tests.
+- Use `provideHttpClientTesting()` (with `provideHttpClient()`) and `HttpTestingController` for all HTTP tests — never make real HTTP calls in unit tests. (`HttpClientTestingModule` is the legacy module-based equivalent; prefer the standalone provider.)
 - Always call `httpMock.verify()` in `afterEach` to catch unexpected requests.
 
 ## Smart Component Load States

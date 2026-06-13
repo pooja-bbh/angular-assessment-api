@@ -114,7 +114,23 @@ Established the fixed technology baseline:
 - Signal-only store (no RxJS): read-only signals `filters`/`page`/`pageSize`/`sortColumn`/`sortDirection`; computed `queryParams` + `hasActiveFilters`; mutation methods (`patchFilters`, `setSearch`, `clearFilters`, `setPage`, `setPageSize`, `setSort`, `reset`).
 - Restores from / persists to `StorageService` (new `PolicyFilters` key), validating untrusted restored state against the allowlists; an `effect()` logs every change at debug. Filter changes reset to page 0.
 
+### Auth interceptor — `src/app/core/interceptors/auth.interceptor.ts`
+- Functional `HttpInterceptorFn` (no class). Attaches `Authorization: Bearer <token>` only to requests whose URL starts with `environment.apiBaseUrl` (token never leaked cross-origin); mock token is a commented stand-in (real token would come from an auth service, never `localStorage`).
+- Logs outgoing request (method + URL) at `info`, non-2xx at `warn`, network errors (status 0) at `error` — never the token/headers; rethrows via `throwError(() => error)` (never swallows). Registered with `provideHttpClient(withFetch(), withInterceptors([authInterceptor]))`.
+- **Duration-logging gap:** logging.md also wants request duration in the info log; that belongs in a dedicated response-timing interceptor (still outstanding), not the auth interceptor.
+
+### Shared dumb components — `src/app/shared/components/`
+- `StatusBadge`, `ExpiryIndicator`, `SkeletonLoader`, `EmptyState`, `ErrorState` — all standalone, OnPush, **zero service deps**, `input()`/`output()` only (no `@Input`/`@Output`/`EventEmitter`), tokens-only styling.
+- Accessibility baked in: status badge keeps colour as a supplementary dot + always-visible label (`role="img"` + `aria-label`); expiry indicator icon `role="img"` + `aria-label` + tooltip; skeleton `role="status"`/`aria-busy`; empty `role="status"`; error `role="alert"`; decorative icons `aria-hidden`; skeleton respects `prefers-reduced-motion`.
+- Each has a spec covering inputs/outputs/a11y. Button labels hardcoded ("Clear filters"/"Retry") to keep input/output lists exactly as specced.
+
+### Test runner — Vitest + `vitest-axe` (resolves the pending runner conflict)
+- Locked the runner to **Vitest** (Angular 22's default for `@angular/build:unit-test`) explicitly in `angular.json` (`runner: "vitest"`, `setupFiles: ["src/test-setup.ts"]`). No Karma/Jasmine anywhere.
+- Adopted **`vitest-axe`** as the jasmine-axe replacement: `src/test-setup.ts` registers `toHaveNoViolations`; `src/vitest-axe.d.ts` augments `@vitest/expect`'s `Matchers`; shared `checkA11y` helper (`src/testing/a11y.ts`) scopes axe to WCAG 2.1 A/AA. Added axe assertions to all five component specs.
+- Updated `testing.md` (Vitest runner, `provideHttpClientTesting()` over `HttpClientTestingModule`, Vitest `vi.*` spies) and `accessibility.md` (vitest-axe; note that jsdom skips colour-contrast — verify manually/in-browser).
+- Full suite green: **23 tests / 6 files**.
+
 ### Outstanding / next
-- HTTP **logging interceptor** (log each request at `info` with method/URL/duration) and global **`ErrorHandler`** not yet created.
-- `features/policy-list`, `policy-stats`, `bulk-actions`, `shared/` components, and `layout/` shell not yet built.
-- Testing-runner decision (Vitest vs Karma/Jasmine) pending; no specs written for the new models/services/store yet.
+- HTTP **logging/timing interceptor** (request duration at `info` per logging.md) and global **`ErrorHandler`** not yet created.
+- `features/policy-list`, `policy-stats`, `bulk-actions`, and `layout/` shell not yet built.
+- No specs yet for the models/services/store (only the shared components are tested); `StorageService` quota-path and `PolicyService` HTTP/optimistic-update tests still owed per testing.md.

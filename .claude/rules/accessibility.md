@@ -6,4 +6,4 @@
 - Every sortable table column header must carry `aria-sort="ascending"`, `"descending"`, or `"none"`, and the `MatTable` must have a `<caption>` element.
 - Apply `aria-busy="true"` to the table container while data is loading, and move focus to the first data row once loading completes.
 - Text contrast ratio must be at least 4.5:1 for normal text and 3:1 for large text in both light and dark themes — status badges and expiry indicators must never use colour as the sole indicator, always pair with a text label or icon.
-- Run axe-core via jasmine-axe in every component spec, and manually test with VoiceOver (Mac) or NVDA (Windows) before submission.
+- Run axe-core via `vitest-axe` in every component spec (the project uses the Vitest runner, not Jasmine) — use the shared `checkA11y` helper in `src/testing/a11y.ts`, scoped to WCAG 2.1 A/AA, and assert `toHaveNoViolations()`. Manually test with VoiceOver (Mac) or NVDA (Windows) before submission. Note: axe colour-contrast checks are skipped under jsdom (no layout engine), so verify contrast manually or in a real browser.
