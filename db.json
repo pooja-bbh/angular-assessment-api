@@ -1,0 +1,54 @@
+{
+  "policies": [
+    {
+      "id": 1,
+      "policyNumber": "POL-2024-SG-00123",
+      "holderName": "Tan Wei Ming",
+      "region": "Singapore",
+      "status": "Active",
+      "premiumFormatted": "SGD 1,200.00",
+      "durationDays": 365,
+      "isExpiringSoon": false
+    },
+    {
+      "id": 2,
+      "policyNumber": "POL-2024-HK-00456",
+      "holderName": "Chan Ka Yan",
+      "region": "Hong Kong",
+      "status": "Active",
+      "premiumFormatted": "HKD 9,800.00",
+      "durationDays": 30,
+      "isExpiringSoon": true
+    },
+    {
+      "id": 3,
+      "policyNumber": "POL-2024-AU-00789",
+      "holderName": "Olivia Harrison",
+      "region": "Australia",
+      "status": "Lapsed",
+      "premiumFormatted": "AUD 2,450.00",
+      "durationDays": 0,
+      "isExpiringSoon": false
+    },
+    {
+      "id": 4,
+      "policyNumber": "POL-2024-JP-01011",
+      "holderName": "Sato Haruki",
+      "region": "Japan",
+      "status": "Active",
+      "premiumFormatted": "JPY 150,000",
+      "durationDays": 12,
+      "isExpiringSoon": true
+    },
+    {
+      "id": 5,
+      "policyNumber": "POL-2024-MY-01213",
+      "holderName": "Nurul Aisyah",
+      "region": "Malaysia",
+      "status": "Pending",
+      "premiumFormatted": "MYR 3,100.00",
+      "durationDays": 365,
+      "isExpiringSoon": false
+    }
+  ]
+}

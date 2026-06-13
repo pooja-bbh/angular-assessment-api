@@ -1,0 +1,88 @@
+@use '@angular/material' as mat;
+
+// ── Angular Material 22 — Material 3 (M3) theming via mat.define-theme() ──
+// Per styling.md + tech-stack.md: use the M3 `mat.define-theme()` API, NOT the
+// legacy M2 `mat.define-light-theme()` / `mat.define-dark-theme()` APIs.
+@include mat.core();
+
+$light-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: light,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: (
+      brand-family: 'Roboto',
+      plain-family: 'Roboto',
+    ),
+    density: (
+      scale: 0,
+    ),
+  )
+);
+
+$dark-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+  )
+);
+
+// Light theme = full component themes; dark = colour-only override applied via a body class.
+body.theme-light {
+  @include mat.all-component-themes($light-theme);
+}
+
+body.theme-dark {
+  @include mat.all-component-colors($dark-theme);
+}
+
+// ── Design tokens (styling.md) — single source of truth for colour/spacing/radius/type ──
+:root {
+  --color-surface: #ffffff;
+  --color-surface-variant: #f5f5f5;
+  --color-on-surface: #212121;
+  --color-primary: #1565c0;
+  --color-on-primary: #ffffff;
+  --color-error: #b71c1c;
+  --color-warning: #e65100;
+  --color-success: #2e7d32;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --font-size-sm: 0.75rem;
+  --font-size-base: 0.875rem;
+  --font-size-lg: 1rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+}
+
+body.theme-dark {
+  --color-surface: #121212;
+  --color-surface-variant: #1e1e1e;
+  --color-on-surface: #e0e0e0;
+  --color-primary: #90caf9;
+  --color-on-primary: #000000;
+}
+
+// ── Global resets only — no component-specific styles here (styling.md) ──
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+}
