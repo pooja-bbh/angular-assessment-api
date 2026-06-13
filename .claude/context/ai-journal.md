@@ -81,3 +81,40 @@ Established the fixed technology baseline:
 
 ### Project guide — `CLAUDE.md`
 - Created the root project guide with a mandatory directive to consult ALL `.claude/rules/` files before generating, modifying, or reviewing code, plus a linked index of all 11 rule files.
+
+---
+
+## Implementation — 2026-06-13
+
+### Project scaffold — Angular 22 `policy-dashboard`
+- Scaffolded via Angular CLI 22.0.1: `ng new policy-dashboard --routing --style=scss --ssr=false --strict`, then `ng add @angular/material@22` and dev deps `json-server` + `concurrently`.
+- M3 theming in `styles.scss` via `mat.define-theme()` (light + dark applied through `body.theme-light`/`theme-dark`), overriding the CLI default `mat.theme()` to follow `styling.md`; design tokens + global resets added. Verified `mat.define-theme()` is still supported (non-deprecated) in Material 22.
+- Added `mock` + `start:all` npm scripts; `environment.ts`/`environment.prod.ts` with `apiBaseUrl: http://localhost:3000` and production `fileReplacements` in `angular.json`; full feature-based folder tree (`core/`, `features/`, `shared/`, `layout/`).
+- **v22 realities recorded:** scaffold is **zoneless** (no `zone.js`) and uses **Vitest**, not Karma/Jasmine — a conflict with `testing.md` (which assumes `HttpClientTestingModule`/`jasmine-axe`); to be resolved before the test phase. CLI's missing `"strict": true` was added manually; `provideAnimationsAsync()` dropped (Material 22 needs no `@angular/animations`).
+- **Naming deviation:** kept `AppComponent`/`app.component.ts` (per `coding-standards.md`) over the CLI v22 default `App`/`app.ts`.
+- **Dependency note:** the only `npm audit` highs are transitive `esbuild`/`vite` inside Angular's own `@angular/build` toolchain — dev-only, no fix published, not shipped to production.
+- Relocated the whole scaffold into `angular-assessment-api/` (merged with existing `.claude/`, `.git/`, `CLAUDE.md`; `.gitignore` merged keeping the Angular CLI version + `.env`/`*.tsbuildinfo`).
+
+### Core models — `src/app/core/models/`
+- `policy.model.ts`: `Policy` (12 fields), string-union types `LineOfBusiness`/`PolicyStatus`/`PolicyRegion` (8 APAC regions)/`PolicyCurrency`, plus `PolicyFilter`, `PolicyPage`, `PolicyStats`, `DateRange`, `PolicySortColumn`, `SortDirection`. Premiums kept as `number` + separate `currency` (for `CurrencyPipe`); dates as ISO strings; all fields `readonly`.
+- `app-error.model.ts`: `AppError { code, message, statusCode? }`. `load-state.model.ts`: `LoadState<T>` discriminated union (`idle`/`loading`/`success`/`error`) with a companion-object of constructors.
+- `policy.constants.ts`: runtime allowlists mirroring the unions (extracted to keep DRY across service + store).
+
+### Mock data — `db.json`
+- Generated exactly 250 policy records (UUID ids, `POL-XXXXXX` numbers, realistic APAC names, region-matched currencies). Distributions verified: status 125/50/50/25, LOB ~even, all 8 regions, ~10% flagged, 15 expiring within 30 days of 2026-06-11.
+- **Rule conflicts resolved:** region kept to the interface's 8 values (Philippines names allowed but not a region); the 15 expiring-soon records use 2025 effective dates (the "2022–2024 + 1-year" rule can't produce a 2026 expiry).
+
+### Core services — `src/app/core/services/`
+- `LoggingService`: sole console writer; `[LEVEL] [timestamp] [context] message | data` format; all levels in dev, warn/error only in prod.
+- `StorageService`: centralised `localStorage` behind typed methods + `StorageKey` const; every call `try`/`catch`; non-sensitive values only.
+- `ThemeService`: signal-based (`theme`/`isDark`), mutates `<body>` class via `Renderer2` (no direct DOM), persists preference, falls back to `prefers-color-scheme`.
+- `PolicyService`: all HTTP via `HttpClient`; `getPolicies`/`getStats`/`setFlaggedForReview`/`bulkSetFlaggedForReview`; maps the json-server v1 envelope → `PolicyPage` contract; sanitises filter inputs before query params; HTTP status → user-friendly `AppError` table (`error-handling.md`); logs summaries only. **Chose Observables over `httpResource()`** for `HttpTestingController` testability.
+
+### Filter store — `src/app/core/services/policy-filter.store.ts`
+- Signal-only store (no RxJS): read-only signals `filters`/`page`/`pageSize`/`sortColumn`/`sortDirection`; computed `queryParams` + `hasActiveFilters`; mutation methods (`patchFilters`, `setSearch`, `clearFilters`, `setPage`, `setPageSize`, `setSort`, `reset`).
+- Restores from / persists to `StorageService` (new `PolicyFilters` key), validating untrusted restored state against the allowlists; an `effect()` logs every change at debug. Filter changes reset to page 0.
+
+### Outstanding / next
+- HTTP **logging interceptor** (log each request at `info` with method/URL/duration) and global **`ErrorHandler`** not yet created.
+- `features/policy-list`, `policy-stats`, `bulk-actions`, `shared/` components, and `layout/` shell not yet built.
+- Testing-runner decision (Vitest vs Karma/Jasmine) pending; no specs written for the new models/services/store yet.
