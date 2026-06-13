@@ -1,3 +1,4 @@
+
 # AI Journal
 
 A log of AI-assisted setup of the project's `.claude` context and rules.
@@ -130,7 +131,79 @@ Established the fixed technology baseline:
 - Updated `testing.md` (Vitest runner, `provideHttpClientTesting()` over `HttpClientTestingModule`, Vitest `vi.*` spies) and `accessibility.md` (vitest-axe; note that jsdom skips colour-contrast — verify manually/in-browser).
 - Full suite green: **23 tests / 6 files**.
 
+### Filter bar — `src/app/features/policy-list/policy-filter-bar/`
+- Dumb component: `currentFilters` input; `filterChange` (`Partial<PolicyFilter>`) + `resetFilters` outputs (via `output()`, not `EventEmitter`). Status multi-select, single-selects for LOB/Region (with "All" option), `MatDateRangePicker`, and a debounced search.
+- **Search debounce**: `valueChanges.pipe(debounceTime(300), distinctUntilChanged())` — never per-keystroke; selects emit immediately. The user flagged this explicitly (saved as a project memory).
+- A reactive `FormGroup` is mirrored from the input via an `effect()` with `{ emitEvent: false }` (no feedback loop). `mat-label` on every field (never placeholder-only); `i18n`/`i18n-placeholder`/`i18n-aria-label` on all static text; installed **`@angular/localize`** (polyfill wired) so the markers compile. Clear button gated by `@if (hasActiveFilters())`. Stacks below 1024px.
+- `filterForm` is public so the spec can drive controls; spec proves debounce timing + emissions.
+
+### Model change — `PolicyFilter.status` is now `readonly PolicyStatus[]`
+- Required so the multi-select status can emit into `Partial<PolicyFilter>`. Rippled through `PolicyService.buildParams` (one repeated `status` query param per value → json-server OR) and `PolicyFilterStore` (`hasActiveFilters` → `status?.length`, restore-validation filters the array). LOB/Region stay single.
+
+### Policy table (smart) — `src/app/features/policy-list/policy-table/`
+- Standalone, OnPush. Injects `PolicyService`, `PolicyFilterStore`, `Router`, `ActivatedRoute`, `MatSnackBar`.
+- **Reactive load**: `toObservable(filterStore.queryParams)` (merged with a `reload$` retry Subject) → `switchMap(getPolicies)` → `map`/`startWith(loading)`/`catchError` → `toSignal`. Exposed `loadState` is a **`linkedSignal`** over that server state — read-only from the server but `.set()`-able for optimistic updates and auto-resetting on re-fetch.
+- Template uses `@switch`/`@case`/`@if`/`@else` only: skeleton (loading), `ErrorStateComponent` with `(retry)` → `reload$`, `EmptyStateComponent` (success+empty), `MatTable` (success+rows). `MatTable`'s `*matRowDef` is its required API, not legacy `*ngFor`.
+- `MatSort` on policyNumber/status/premiumAmount/expiryDate → `setSort()` (mat-sort-header supplies `aria-sort`); `MatPaginator` bound to store page/pageSize; visually-hidden `<caption>`; signal-based bulk selection (master + per-row, `selectedIds` signal — `SelectionModel.selected.length` isn't OnPush-reactive).
+- **Optimistic flag**: `flagPolicies()` sets the signal immediately, calls `PolicyService.flagForReview()`, reverts + opens a snackbar on error. URL sync via `effect()` (page/size/sort/dir); `initFromUrl()` seeds the store from the route snapshot before the pipeline subscribes (single initial fetch).
+- **Service rename**: `bulkSetFlaggedForReview` → **`flagForReview`** (handles single or many ids; supersedes the earlier journal mention).
+
+### Bulk action toolbar — `src/app/features/bulk-actions/bulk-action-toolbar/`
+- Dumb: `selectedCount` input; `flagForReview` + `clearSelection` outputs. ICU plural count (`{{ }}` interpolation in the case — `#` rendered literally, the spec caught it); `role="region"` + `aria-live`. Spec covers count + both outputs.
+- Full suite green: **40 tests / 9 files**.
+
+### Stats panel (smart) — `src/app/features/policy-stats/policy-stats.component.ts`
+- Standalone, OnPush; injects `PolicyService` + `PolicyFilterStore`. **`effect()`-driven re-fetch** (per user steer): the effect reads `filterStore.queryParams()` then calls `getStats()`, writing a writable `loadState` signal; prior request unsubscribed each run (race-safe) and on `DestroyRef`.
+- Responsive CSS-grid of `MatCard`s: 4 status counts, 4 LOB premium totals (`CurrencyPipe`), and an "Expiring within 30 days" card highlighted with `var(--color-warning)` when count > 0. Skeleton cards while loading; small inline `role="alert"` error that does **not** render the grid (never blocks the table).
+- Every card has a descriptive `$localize` `aria-label` (metric + value). **Display currency = USD** for LOB totals — `PolicyStats.totalPremiumByLob` is a single number aggregated across currencies (BFF limitation already noted); stats are portfolio-wide, re-fetched on filter change but not yet narrowed by filter.
+
+### Layout & wiring — `header/`, `dashboard/`, `app.*`
+- `HeaderComponent` (layout): `mat-toolbar` with "Chubb APAC | Policy Dashboard" + `mat-icon-button` theme toggle calling `ThemeService.toggleTheme()`; dynamic `aria-label` (computed) states current theme + the switch action; icon reflects target theme.
+- `DashboardComponent` (smart, `features/policy-list/dashboard/`): composes filter bar + stats + table; wires `(filterChange)` → `patchFilters`, `(resetFilters)` → `clearFilters`, and feeds `[currentFilters]="filterStore.queryParams()"`. (`Partial<PolicyFilter>` is assignable to `patchFilters`' `Partial<PolicyFilterCriteria>` — superset → subset param.)
+- `AppComponent`: renders `<app-header>` + `<router-outlet>`; an `effect()` watching `ThemeService.theme` reflects the class onto the **host** (ThemeService still owns the `<body>` class that M3/tokens hang off — host class is an extra hook; slight redundancy flagged).
+- `app.routes.ts`: single lazy route `'' → DashboardComponent`. `app.config.ts`: `provideRouter`, `provideHttpClient(withInterceptors([authInterceptor]))`, `provideAnimations`, `LOCALE_ID: 'en-SG'` (+ `registerLocaleData(en-SG)`).
+- **v22 deprecations handled**: dropped `withFetch()` (deprecated — fetch is now default); kept `provideAnimations()` despite its deprecation (both it and `provideAnimationsAsync` are deprecated in v22, removal intended v23 in favour of template `animate.enter/leave` — no non-deprecated DI provider exists). Installed `@angular/animations@22`. Renamed `ThemeService.toggle` → `toggleTheme`.
+- **Bug fixed**: `ThemeService.resolveInitialTheme` crashed under jsdom (`matchMedia is not a function`); now guards `typeof view.matchMedia === 'function'`.
+- Build warning: initial bundle 572 kB > 500 kB budget (eager animations + Material in the shell) — non-fatal; bump the budget or lean on the lazy dashboard route if it matters.
+- Full suite green: **45 tests / 10 files**.
+
+### Styling setup — `styles.scss` + component stylesheets
+- `styles.scss` finalised: M3 `mat.define-theme()` light/dark via `body.theme-light`/`theme-dark`; full styling.md token block in `:root` with dark overrides; global resets now include universal `box-sizing: border-box` + `body { margin: 0 }`.
+- **Primary**: Material theme uses `mat.$azure-palette` (professional blue ≈ #1565C0) since M3 needs a generated tonal palette; the exact `#1565C0` is the `--color-primary` token. Pixel-exact M3 primary → `ng generate @angular/material:m3-theme`.
+- **Added `--color-on-success`/`-on-error`/`-on-warning` tokens** (theme-independent) so badges pair each semantic fill with AA-contrast text without hardcoding hex. `--color-on-warning: #000000` because white on `#e65100` is only ~3.4:1 (fails AA); black is ~6.2:1.
+- `StatusBadgeComponent` + `SkeletonLoaderComponent` converted from inline `styles` to `styleUrl` `.scss` files. **Badge redesigned**: semantic-colour fill + contrasting text (dropped the earlier neutral-pill + coloured-dot look); kept the `__label` span the spec asserts. Skeleton rows now ≈ a 52px Material data row (`min-height: 3.25rem`), pulse on `var(--color-surface-variant)`.
+- Full suite still green: **45 tests / 10 files**.
+
 ### Outstanding / next
 - HTTP **logging/timing interceptor** (request duration at `info` per logging.md) and global **`ErrorHandler`** not yet created.
-- `features/policy-list`, `policy-stats`, `bulk-actions`, and `layout/` shell not yet built.
-- No specs yet for the models/services/store (only the shared components are tested); `StorageService` quota-path and `PolicyService` HTTP/optimistic-update tests still owed per testing.md.
+- Specs still owed per testing.md: models/services/store (esp. `StorageService` quota-path, `PolicyService` HTTP-mapping via `provideHttpClientTesting`, `PolicyFilterStore.initFromUrl` deep-link, `ThemeService`); `HeaderComponent`/`DashboardComponent` have no specs yet.
+- Stats not filter-scoped (`getStats()` ignores params); decide whether to thread the filter in. Initial-bundle budget warning.
+
+---
+
+## Response classification — 2026-06-13
+
+How the user responded to each AI deliverable this session. (**Accepted** = used as delivered; **Challenged** = accepted only after the user pushed back on the approach; **Rejected** = the tool call was declined and redone.)
+
+### Accepted
+- Angular 22 scaffold; relocation into `angular-assessment-api/`.
+- Core models + `policy.constants.ts`; `db.json` (250 records).
+- Core services (Logging, Storage, Theme, Policy); `policy-filter.store.ts`.
+- `auth.interceptor.ts`; five shared dumb components + specs.
+- Switch to **Vitest** + `vitest-axe`.
+- `policy-table` (smart) + `bulk-action-toolbar` + specs.
+- Layout & wiring (header, dashboard, `app.*`, routes, config).
+- Styling setup (`styles.scss` + status-badge/skeleton `.scss` files).
+- All ai-journal update requests.
+
+### Challenged (revised after user pushback, not a hard rejection)
+- **Filter bar — debounce**: user insisted "search fires on every keystroke → force `debounceTime(300)` + `distinctUntilChanged()`". Code already debounced; re-affirmed and made unmistakable. Saved as a project memory.
+- **Stats panel — reactivity**: user directed "add `effect()` to re-fetch whenever `queryParams` changes" instead of the `toObservable→switchMap→toSignal` pipeline. Rebuilt with an `effect()`-driven fetch.
+
+### Rejected (tool call declined, then redone)
+- `policy-filter-bar.component.ts` write — rejected (and an earlier interrupt), then re-submitted with the explicit debounce. 
+- `policy-stats.component.ts` write — rejected, then re-submitted with the `effect()`-based fetch.
+
+### Self-surfaced conflicts (decisions I flagged for the user, per CLAUDE.md)
+- `mat.define-theme()` vs Material 22's `mat.theme()`; `AppComponent` naming vs CLI default; Vitest vs the testing.md `jasmine-axe` assumption; multi-select status forcing `PolicyFilter.status` → array; 8 APAC regions vs the Philippines-name list; expiring-soon dates vs the 2022–2024 rule; `provideAnimations` deprecation; host-vs-body theme class.
+- Styling: M3 needing a generated palette vs the requested `#1565C0` hex (used azure palette + token); badge contrast needing new `--color-on-warning` (black, not white) because styling.md has no on-* tokens; coloured-fill badge redesign superseding the earlier neutral-pill + dot.

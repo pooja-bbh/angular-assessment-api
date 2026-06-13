@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.filter-bar__field {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+}
+
+.filter-bar__field--search {
+  flex: 2 1 18rem;
+}
+
+.filter-bar__clear {
+  align-self: center;
+}
+
+// Stack the controls vertically below the dashboard's 1024px breakpoint (styling.md).
+@media (max-width: 1023px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar__field,
+  .filter-bar__field--search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

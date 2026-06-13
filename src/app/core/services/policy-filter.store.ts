@@ -1,4 +1,5 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { Params } from '@angular/router';
 import {
   LINES_OF_BUSINESS,
   POLICY_REGIONS,
@@ -81,7 +82,7 @@ export class PolicyFilterStore {
   readonly hasActiveFilters = computed<boolean>(() => {
     const criteria = this.filtersSignal();
     return Boolean(
-      criteria.status ||
+      criteria.status?.length ||
         criteria.lineOfBusiness ||
         criteria.region ||
         criteria.search?.trim() ||
@@ -144,6 +145,39 @@ export class PolicyFilterStore {
     this.sortDirectionSignal.set(DEFAULT_SORT_DIRECTION);
   }
 
+  /**
+   * Hydrate the store from URL query params (deep-link / refresh support).
+   * Validated the same way as restored storage — URL input is untrusted.
+   * Expected params: `page`, `size`, `sort`, `dir`, `status` (comma-separated),
+   * `lob`, `region`, `q`, `start`, `end`.
+   */
+  initFromUrl(params: Params): void {
+    const lineOfBusiness: unknown = params['lob'];
+    const region: unknown = params['region'];
+    const search: unknown = params['q'];
+    const start: unknown = params['start'];
+    const end: unknown = params['end'];
+    const statuses = this.splitParam(params['status']).filter((value) => this.isStatus(value));
+
+    this.filtersSignal.set({
+      ...(statuses.length ? { status: statuses } : {}),
+      ...(this.isLineOfBusiness(lineOfBusiness) ? { lineOfBusiness } : {}),
+      ...(this.isRegion(region) ? { region } : {}),
+      ...(typeof search === 'string' && search.trim() ? { search: search.trim() } : {}),
+      ...(typeof start === 'string' || typeof end === 'string'
+        ? { dateRange: { start: typeof start === 'string' ? start : null, end: typeof end === 'string' ? end : null } }
+        : {}),
+    });
+    this.pageSignal.set(this.toNonNegativeInt(this.toNumber(params['page']), DEFAULT_PAGE));
+    this.pageSizeSignal.set(this.toPositiveInt(this.toNumber(params['size']), DEFAULT_PAGE_SIZE));
+    if (this.isSortColumn(params['sort'])) {
+      this.sortColumnSignal.set(params['sort']);
+    }
+    if (this.isSortDirection(params['dir'])) {
+      this.sortDirectionSignal.set(params['dir']);
+    }
+  }
+
   private restoreState(): FilterState {
     const stored = this.storage.get<Partial<PolicyFilter>>(StorageKey.PolicyFilters);
     if (!stored) {
@@ -171,13 +205,38 @@ export class PolicyFilterStore {
   // Restored values come from untrusted storage, so each field is validated before use.
   private sanitiseCriteria(stored: Partial<PolicyFilter>): PolicyFilterCriteria {
     const search = typeof stored.search === 'string' ? stored.search.trim() : '';
+    const statuses = Array.isArray(stored.status) ? stored.status.filter((value) => this.isStatus(value)) : [];
     return {
-      ...(this.isStatus(stored.status) ? { status: stored.status } : {}),
+      ...(statuses.length ? { status: statuses } : {}),
       ...(this.isLineOfBusiness(stored.lineOfBusiness) ? { lineOfBusiness: stored.lineOfBusiness } : {}),
       ...(this.isRegion(stored.region) ? { region: stored.region } : {}),
       ...(search ? { search } : {}),
       ...(this.isDateRange(stored.dateRange) ? { dateRange: stored.dateRange } : {}),
     };
+  }
+
+  private toNumber(value: unknown): number | undefined {
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+    return undefined;
+  }
+
+  private splitParam(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string');
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+    }
+    return [];
   }
 
   private toNonNegativeInt(value: unknown, fallback: number): number {

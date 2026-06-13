@@ -1,0 +1,121 @@
+<section class="policy-table" [attr.aria-busy]="loadState().status === 'loading'">
+  @if (selectedCount() > 0) {
+    <app-bulk-action-toolbar
+      [selectedCount]="selectedCount()"
+      (flagForReview)="onBulkFlagForReview()"
+      (clearSelection)="clearSelection()"
+    />
+  }
+
+  @switch (loadState().status) {
+    @case ('loading') {
+      <app-skeleton-loader [rows]="filterStore.pageSize()" />
+    }
+
+    @case ('error') {
+      <app-error-state [message]="errorMessage()" (retry)="onRetry()" />
+    }
+
+    @case ('success') {
+      @if (policies().length === 0) {
+        <app-empty-state [showCta]="filterStore.hasActiveFilters()" (ctaClick)="onClearFilters()" />
+      } @else {
+        <table
+          mat-table
+          matSort
+          class="policy-table__table"
+          [dataSource]="policies()"
+          [matSortActive]="filterStore.sortColumn()"
+          [matSortDirection]="filterStore.sortDirection()"
+          (matSortChange)="onSortChange($event)"
+        >
+          <caption class="policy-table__caption" i18n="@@policyTableCaption">
+            Policies showing status, premium, and expiry. Sortable columns and selectable rows.
+          </caption>
+
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox
+                (change)="toggleAll()"
+                [checked]="isAllSelected()"
+                [indeterminate]="isPartiallySelected()"
+                i18n-aria-label="@@selectAllAria"
+                aria-label="Select all policies on this page"
+              />
+            </th>
+            <td mat-cell *matCellDef="let row">
+              <mat-checkbox
+                (change)="toggleRow(row)"
+                [checked]="isSelected(row)"
+                i18n-aria-label="@@selectRowAria"
+                aria-label="Select this policy"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="policyNumber">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colPolicyNumber">Policy number</th>
+            <td mat-cell *matCellDef="let row">{{ row.policyNumber }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="policyholderName">
+            <th mat-header-cell *matHeaderCellDef i18n="@@colPolicyholder">Policyholder</th>
+            <td mat-cell *matCellDef="let row">{{ row.policyholderName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="region">
+            <th mat-header-cell *matHeaderCellDef i18n="@@colRegion">Region</th>
+            <td mat-cell *matCellDef="let row">{{ row.region }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colStatus">Status</th>
+            <td mat-cell *matCellDef="let row"><app-status-badge [status]="row.status" /></td>
+          </ng-container>
+
+          <ng-container matColumnDef="premiumAmount">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colPremium">Premium</th>
+            <td mat-cell *matCellDef="let row">{{ row.premiumAmount | currency: row.currency }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="expiryDate">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header i18n="@@colExpiry">Expiry date</th>
+            <td mat-cell *matCellDef="let row">{{ row.expiryDate | date: 'mediumDate' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef i18n="@@colActions">Actions</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                type="button"
+                (click)="onFlagRow(row)"
+                i18n-aria-label="@@flagRowAria"
+                aria-label="Flag this policy for review"
+              >
+                @if (row.flaggedForReview) {
+                  <mat-icon>flag</mat-icon>
+                } @else {
+                  <mat-icon>outlined_flag</mat-icon>
+                }
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+
+        <mat-paginator
+          [length]="totalElements()"
+          [pageIndex]="filterStore.page()"
+          [pageSize]="filterStore.pageSize()"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPageChange($event)"
+          i18n-aria-label="@@paginatorAria"
+          aria-label="Select page of policies"
+        />
+      }
+    }
+  }
+</section>

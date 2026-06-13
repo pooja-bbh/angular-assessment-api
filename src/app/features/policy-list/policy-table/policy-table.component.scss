@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.policy-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.policy-table__table {
+  width: 100%;
+}
+
+// Caption is for screen readers only — visually hidden but exposed to assistive tech.
+.policy-table__caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

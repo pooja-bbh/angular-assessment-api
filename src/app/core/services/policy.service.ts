@@ -75,8 +75,8 @@ export class PolicyService {
     );
   }
 
-  /** Flag or unflag many policies in one bulk action. */
-  bulkSetFlaggedForReview(policyIds: readonly string[], flaggedForReview: boolean): Observable<readonly Policy[]> {
+  /** Flag or unflag one or more policies in a single bulk action. */
+  flagForReview(policyIds: readonly string[], flaggedForReview: boolean): Observable<readonly Policy[]> {
     if (policyIds.length === 0) {
       return forkJoin([] as Observable<Policy>[]);
     }
@@ -94,8 +94,9 @@ export class PolicyService {
       const prefix = filter.sortDirection === 'desc' ? '-' : '';
       params = params.set('_sort', `${prefix}${filter.sortColumn}`);
     }
-    if (filter.status) {
-      params = params.set('status', filter.status);
+    // Multi-select status → one repeated query param per value (json-server treats these as OR).
+    for (const status of filter.status ?? []) {
+      params = params.append('status', status);
     }
     if (filter.lineOfBusiness) {
       params = params.set('lineOfBusiness', filter.lineOfBusiness);

@@ -21,44 +21,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
       }
     </div>
   `,
-  styles: [
-    `
-      .skeleton {
-        display: flex;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-      }
-
-      .skeleton__row {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: var(--spacing-md);
-      }
-
-      .skeleton__cell {
-        height: var(--spacing-md);
-        border-radius: var(--radius-sm);
-        background: var(--color-surface-variant);
-        animation: skeleton-pulse 1.5s ease-in-out infinite;
-      }
-
-      @keyframes skeleton-pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.4;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .skeleton__cell {
-          animation: none;
-        }
-      }
-    `,
-  ],
+  styleUrl: './skeleton-loader.component.scss',
 })
 export class SkeletonLoaderComponent {
   readonly rows = input<number>(5);

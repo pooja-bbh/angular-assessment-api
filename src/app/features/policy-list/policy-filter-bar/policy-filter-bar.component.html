@@ -1,0 +1,60 @@
+<form class="filter-bar" [formGroup]="filterForm" role="search">
+  <mat-form-field class="filter-bar__field">
+    <mat-label i18n="@@filterStatusLabel">Status</mat-label>
+    <mat-select formControlName="status" multiple>
+      @for (status of statuses; track status) {
+        <mat-option [value]="status">{{ status }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field class="filter-bar__field">
+    <mat-label i18n="@@filterLineOfBusinessLabel">Line of business</mat-label>
+    <mat-select formControlName="lineOfBusiness">
+      <mat-option [value]="null" i18n="@@filterLineOfBusinessAll">All lines</mat-option>
+      @for (lob of linesOfBusiness; track lob) {
+        <mat-option [value]="lob">{{ lob }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field class="filter-bar__field">
+    <mat-label i18n="@@filterRegionLabel">Region</mat-label>
+    <mat-select formControlName="region">
+      <mat-option [value]="null" i18n="@@filterRegionAll">All regions</mat-option>
+      @for (region of regions; track region) {
+        <mat-option [value]="region">{{ region }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field class="filter-bar__field">
+    <mat-label i18n="@@filterDateRangeLabel">Effective / expiry date range</mat-label>
+    <mat-date-range-input [rangePicker]="dateRangePicker">
+      <input matStartDate formControlName="start" i18n-placeholder="@@filterDateStart" placeholder="Start date" />
+      <input matEndDate formControlName="end" i18n-placeholder="@@filterDateEnd" placeholder="End date" />
+    </mat-date-range-input>
+    <mat-datepicker-toggle matIconSuffix [for]="dateRangePicker" />
+    <mat-date-range-picker #dateRangePicker />
+  </mat-form-field>
+
+  <mat-form-field class="filter-bar__field filter-bar__field--search">
+    <mat-label i18n="@@filterSearchLabel">Search</mat-label>
+    <mat-icon matIconPrefix aria-hidden="true">search</mat-icon>
+    <input
+      matInput
+      type="text"
+      formControlName="search"
+      i18n-aria-label="@@filterSearchAria"
+      aria-label="Search by policy number, holder name, or underwriter"
+    />
+    <mat-hint i18n="@@filterSearchHint">Policy number, holder name, or underwriter</mat-hint>
+  </mat-form-field>
+
+  @if (hasActiveFilters()) {
+    <button class="filter-bar__clear" type="button" mat-stroked-button (click)="resetFilters.emit()">
+      <mat-icon aria-hidden="true">filter_alt_off</mat-icon>
+      <span i18n="@@filterClear">Clear filters</span>
+    </button>
+  }
+</form>

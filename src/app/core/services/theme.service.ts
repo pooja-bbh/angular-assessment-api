@@ -35,7 +35,7 @@ export class ThemeService {
     this.currentTheme.set(theme);
   }
 
-  toggle(): void {
+  toggleTheme(): void {
     this.currentTheme.update((theme) => (theme === 'dark' ? 'light' : 'dark'));
   }
 
@@ -52,7 +52,11 @@ export class ThemeService {
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
-    const prefersDark = this.document.defaultView?.matchMedia('(prefers-color-scheme: dark)').matches ?? false;
-    return prefersDark ? 'dark' : 'light';
+    // `matchMedia` is absent in non-browser environments (e.g. jsdom under test).
+    const view = this.document.defaultView;
+    if (view && typeof view.matchMedia === 'function') {
+      return view.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
   }
 }

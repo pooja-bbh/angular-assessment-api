@@ -69,7 +69,8 @@ export interface DateRange {
  * Optional fields are omitted from the query string when unset.
  */
 export interface PolicyFilter {
-  readonly status?: PolicyStatus;
+  // Multi-select: an empty/absent array means "any status".
+  readonly status?: readonly PolicyStatus[];
   readonly lineOfBusiness?: LineOfBusiness;
   readonly region?: PolicyRegion;
   readonly dateRange?: DateRange;
